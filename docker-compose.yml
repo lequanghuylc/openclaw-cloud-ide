@@ -1,0 +1,24 @@
+services:
+  openclaw-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openclaw-with-file-manager
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "3399:3399"
+      - "18789:18789"
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      C9SDK_PASSWORD: ${C9SDK_PASSWORD:-changeme}
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      OPENCLAW_AUTO_APPROVE_INTERVAL: ${OPENCLAW_AUTO_APPROVE_INTERVAL:-10}
+      OPENCLAW_HEALTH_URL: ${OPENCLAW_HEALTH_URL:-http://127.0.0.1:18789/healthz}
+    volumes:
+      - openclaw_data:/root/.openclaw
+    restart: unless-stopped
+
+volumes:
+  openclaw_data:

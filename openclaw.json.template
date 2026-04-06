@@ -1,0 +1,21 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openai/gpt-5.4"
+      },
+      "workspace": "/root/.openclaw/workspace"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "dmPolicy": "pairing"
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "lan"
+  }
+}
