@@ -1,6 +1,11 @@
-# OpenClaw with file manager
+# OpenClaw with File manager
 
-Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-pm2-nginx): **OpenClaw** gateway (Node **22** via **nvm** + global `openclaw` CLI), **nginx** reverse proxy on port **8080**, and **c9sdk** (Cloud9-style IDE) on **3399** via **pm2** under **supervisor**.
+Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-pm2-nginx): **OpenClaw** gateway (Node **24** via **nvm** + global `openclaw` CLI), **nginx** reverse proxy on port **8080**, and **c9sdk** (Cloud9-style IDE) on **3399** via **pm2** under **supervisor**.
+
+## Why do we need C9 IDE
+- Access to terminal and files, full control of Openclaw config
+- Provide a ability to jump in when Openclaw stuck with the tasks
+- Do compldex 3rd integrations, even a webserver
 
 ## Ports
 
@@ -9,21 +14,23 @@ Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-p
 - **c9sdk (nginx proxy)**: `8081` → `3399`
 - **c9sdk (direct)**: `3399`
 
-## Required environment variables
+## Environment variables
 
 - **`TELEGRAM_BOT_TOKEN`**: Telegram bot token from [@BotFather](https://t.me/BotFather)
 - **`OPENAI_API_KEY`**: OpenAI API key for the default model (`openai/gpt-5.4` in `openclaw.json.template`; change the model there if you prefer another OpenAI id)
 - **`C9SDK_PASSWORD`**: password for the c9sdk server (`c9sdk:$C9SDK_PASSWORD`)
 
-On first start, `/root/bootstrap-openclaw.sh` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`), and writes **`/root/.openclaw/.nvmrc`** with `22` so shells that `cd ~/.openclaw` can pick Node 22 via your nvm + `.nvmrc` setup. Persist `/root/.openclaw` if you want stable pairing and sessions.
+On first start, `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`) even when env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
+
+These envs are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to have other setup, just keep those env variables blank. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
 
 ### Dashboard pairing (auto-approve)
 
-A one-shot supervisor program **`openclaw-auto-approve`** runs **`/root/auto-approve-openclaw-device.mjs`** with **[google/zx](https://github.com/google/zx)** (`zx` is installed globally under Node 22). It waits until `OPENCLAW_HEALTH_URL` (default `http://127.0.0.1:18789/healthz`) responds, polls **`openclaw devices list --json`** every **`OPENCLAW_AUTO_APPROVE_INTERVAL`** seconds until **pending** is non-empty, parses **`pending[0].requestId`** (or **`id`**), then runs **`openclaw devices approve <requestId>`** (see [devices CLI](https://docs.clawd.bot/cli/devices)) and **exits**. It keeps polling while the gateway is down, the list call fails, or there are no pending requests. Supervisor runs **`nvm use 22`**, sets **`NODE_PATH="$(npm root -g)"`** (so **`import "zx/globals"`** resolves the globally installed **zx** package), then **`exec zx …`**. Optional **`OPENCLAW_GATEWAY_TOKEN`**. **`autorestart=false`** after a successful exit. If you run the script by hand, use the same **`NODE_PATH`** or you will see **`ERR_MODULE_NOT_FOUND`** for **zx**.
+A one-shot supervisor program **`openclaw-auto-approve`** runs **`/root/auto-approve-openclaw-device.mjs`** with **[google/zx](https://github.com/google/zx)** (`zx` is installed globally under Node 24). It waits until `OPENCLAW_HEALTH_URL` (default `http://127.0.0.1:18789/healthz`) responds, polls **`openclaw devices list --json`** every **`OPENCLAW_AUTO_APPROVE_INTERVAL`** seconds until **pending** is non-empty, parses **`pending[0].requestId`** (or **`id`**), then runs **`openclaw devices approve <requestId>`** (see [devices CLI](https://docs.clawd.bot/cli/devices)) and **exits**. It keeps polling while the gateway is down, the list call fails, or there are no pending requests. Supervisor runs **`nvm use 24`**, sets **`NODE_PATH="$(npm root -g)"`** (so **`import "zx/globals"`** resolves the globally installed **zx** package), then **`exec zx …`**. Optional **`OPENCLAW_GATEWAY_TOKEN`**. **`autorestart=false`** after a successful exit. If you run the script by hand, use the same **`NODE_PATH`** or you will see **`ERR_MODULE_NOT_FOUND`** for **zx**.
 
 ## Node / nvm
 
-`NVM_DIR=/usr/local/nvm`. This image installs **Node 22**, runs **`npm install -g openclaw@latest`** under Node 22, then runs **`nvm alias default 12`** so the image default stays **Node 12**. Supervisor starts **c9sdk** with **`nvm use 12`** before **`pm2`**, and starts **OpenClaw** with **`nvm use 22`** before **`openclaw gateway`**, so each stack uses the intended Node version even if `PATH` would otherwise pick the wrong one.
+This has NVM installed. Openclaw is running Nodejs 24, while C9 IDE uses Nodejs 12. In some cases you can not access `openclaw` via cli, try to run `nvm use 24` first.
 
 ## Build & run (Compose)
 
