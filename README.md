@@ -19,6 +19,7 @@ Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-p
 - **`TELEGRAM_BOT_TOKEN`**: Telegram bot token from [@BotFather](https://t.me/BotFather)
 - **`OPENAI_API_KEY`**: OpenAI API key for the default model (`openai/gpt-5.4` in `openclaw.json.template`; change the model there if you prefer another OpenAI id)
 - **`C9SDK_PASSWORD`**: password for the c9sdk server (`c9sdk:$C9SDK_PASSWORD`)
+- **`OPENCLAW_GATEWAY_TOKEN`**: Token to used with Openclaw dashboard gateway
 
 On first start, `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`) even when env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
 
@@ -26,7 +27,12 @@ These envs are setup for convenient reasons, since ChatGPT and Telegram is mostl
 
 ### Dashboard pairing (auto-approve)
 
-A one-shot supervisor program **`openclaw-auto-approve`** runs **`/root/auto-approve-openclaw-device.mjs`** with **[google/zx](https://github.com/google/zx)** (`zx` is installed globally under Node 24). It waits until `OPENCLAW_HEALTH_URL` (default `http://127.0.0.1:18789/healthz`) responds, polls **`openclaw devices list --json`** every **`OPENCLAW_AUTO_APPROVE_INTERVAL`** seconds until **pending** is non-empty, parses **`pending[0].requestId`** (or **`id`**), then runs **`openclaw devices approve <requestId>`** (see [devices CLI](https://docs.clawd.bot/cli/devices)) and **exits**. It keeps polling while the gateway is down, the list call fails, or there are no pending requests. Supervisor runs **`nvm use 24`**, sets **`NODE_PATH="$(npm root -g)"`** (so **`import "zx/globals"`** resolves the globally installed **zx** package), then **`exec zx …`**. Optional **`OPENCLAW_GATEWAY_TOKEN`**. **`autorestart=false`** after a successful exit. If you run the script by hand, use the same **`NODE_PATH`** or you will see **`ERR_MODULE_NOT_FOUND`** for **zx**.
+Also for convenient setup, please follow the steps here:
+- Make the container up and running (deploy template, run docker image,..etc..)
+- Access Dashboard gateway (`http://localhost:18789` or public domain), input password (`OPENCLAW_GATEWAY_TOKEN`). It will fail but it will register the first device
+- [A script run in the background and listen the first device trying to pair and automatically approve it]
+- Wait for a bit, or check log (via IDE) in `/var/log/supervisor` "approved successfully, exiting"
+- Login again, now you can access the dashboard
 
 ## Node / nvm
 
