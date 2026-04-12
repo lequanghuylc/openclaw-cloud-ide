@@ -2,7 +2,7 @@
 
 $.verbose = false;
 
-const INTERVAL_MS = Number(process.env.OPENCLAW_AUTO_APPROVE_INTERVAL ?? 10) * 1000;
+const INTERVAL_MS = Number(process.env.OPENCLAW_AUTO_APPROVE_INTERVAL ?? 3) * 1000;
 const HEALTH_URL = process.env.OPENCLAW_HEALTH_URL ?? "http://127.0.0.1:18789/healthz";
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN;
 

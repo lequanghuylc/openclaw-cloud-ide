@@ -1,17 +1,27 @@
-# OpenClaw with file manager (Railway template)
+# OpenClaw with File manager
 
-This template runs **OpenClaw** with a Cloud9-style file manager:
+This template gives you full control of your Openclaw
 
-- OpenClaw gateway (Node **22** via **nvm**), Telegram channel from env
-- File manager via **c9sdk** and **pm2**
-- **nginx** on **8080** proxying the gateway; **8081** proxying c9sdk
+## Why do we need C9 IDE
+- Access to terminal and files, full control of Openclaw config
+- Provide a ability to jump in when Openclaw stuck with the tasks
+- Do compldex 3rd integrations, even a webserver
 
-## Deployments and domains
+## Environment variables
 
-Point your public domain at port **8080** for the OpenClaw Control UI (proxied to the gateway). Use **8081** (or Railway’s extra domain) for the IDE if you expose it.
+- **`TELEGRAM_BOT_TOKEN`**: Telegram bot token from [@BotFather](https://t.me/BotFather)
+- **`OPENAI_API_KEY`**: OpenAI API key for the default model (`openai/gpt-5.4` in `openclaw.json.template`; change the model there if you prefer another OpenAI id)
 
-## Required variables
+These envs are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to have other setup, just keep those env variables blank. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
 
-Set **`TELEGRAM_BOT_TOKEN`**, **`OPENAI_API_KEY`**, and **`C9SDK_PASSWORD`** in Railway (or your host) before the service starts.
+- **`C9SDK_PASSWORD`**: password for the c9sdk server (`c9sdk:$C9SDK_PASSWORD`)
+- **`OPENCLAW_GATEWAY_TOKEN`**: Token to used with Openclaw dashboard gateway
 
-Persist **`/root/.openclaw`** if you need stable sessions and pairing across deploys.
+### Dashboard pairing (auto-approve)
+
+Also for convenient setup, please follow the steps here:
+- Make the container up and running (deploy template, run docker image,..etc..)
+- Access Dashboard gateway (`http://localhost:18789` or public domain), input password (`OPENCLAW_GATEWAY_TOKEN`). It will fail but it will register the first device
+- [A script run in the background and listen the first device trying to pair and automatically approve it]
+- Wait for a bit, or check logs in the IDE: `pm2 logs openclaw-auto-approve` (look for `approved successfully, exiting`), or `pm2 logs readme` for a short usage summary
+- Login again, now you can access the dashboard

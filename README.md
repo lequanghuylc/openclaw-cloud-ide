@@ -21,7 +21,7 @@ Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-p
 - **`C9SDK_PASSWORD`**: password for the c9sdk server (`c9sdk:$C9SDK_PASSWORD`)
 - **`OPENCLAW_GATEWAY_TOKEN`**: Token to used with Openclaw dashboard gateway
 
-On first start, `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`) even when env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
+On first start, `/root/bootstrap.sh` installs bundled [OpenClaw skills](https://docs.openclaw.ai/tools/creating-skills) from `included-skills/` into `/root/.openclaw/workspace/skills` (same layout as `~/.openclaw/workspace/skills/` in the docs), then `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`) even when env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
 
 These envs are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to have other setup, just keep those env variables blank. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
 
@@ -31,7 +31,7 @@ Also for convenient setup, please follow the steps here:
 - Make the container up and running (deploy template, run docker image,..etc..)
 - Access Dashboard gateway (`http://localhost:18789` or public domain), input password (`OPENCLAW_GATEWAY_TOKEN`). It will fail but it will register the first device
 - [A script run in the background and listen the first device trying to pair and automatically approve it]
-- Wait for a bit, or check log (via IDE) in `/var/log/supervisor` "approved successfully, exiting"
+- Wait for a bit, or check logs in the IDE: `pm2 logs openclaw-auto-approve` (look for `approved successfully, exiting`), or `pm2 logs readme` for a short usage summary
 - Login again, now you can access the dashboard
 
 ## Node / nvm

@@ -1,0 +1,14 @@
+{
+    "debug": {
+        "@pause": 0
+    },
+    "projecttree": {
+        "@showhidden": true
+    },
+    "tabs": {
+        "@show": true
+    },
+    "welcome": {
+        "@first": true
+    }
+}

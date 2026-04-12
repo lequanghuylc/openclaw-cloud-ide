@@ -23,21 +23,36 @@ RUN apt-get update \
 
 RUN mkdir -p /var/www/html
 
+COPY README.md /var/www/html/README.md
+COPY ide-readme /var/www/html/ide-readme
+RUN chmod +x /var/www/html/ide-readme/print-instructions.mjs
+
 COPY nginx-conf/openclaw.conf /etc/nginx/sites-enabled/
 COPY nginx-conf/project.conf /etc/nginx/sites-enabled/
 
 COPY bootstrap-openclaw.mjs /root/bootstrap-openclaw.mjs
 RUN chmod +x /root/bootstrap-openclaw.mjs
 
+COPY bootstrap.sh /root/bootstrap.sh
+RUN chmod +x /root/bootstrap.sh
+
+COPY scripts/install-included-skills.sh /var/www/html/scripts/install-included-skills.sh
+RUN chmod +x /var/www/html/scripts/install-included-skills.sh
+
+COPY included-skills /var/www/html/included-skills
+
 COPY openclaw.json.template /root/openclaw.json.template
 
-COPY auto-approve-openclaw-device.mjs /root/auto-approve-openclaw-device.mjs
-RUN chmod +x /root/auto-approve-openclaw-device.mjs
+COPY auto-approve-openclaw /root/auto-approve-openclaw
+RUN chmod +x /root/auto-approve-openclaw/auto-approve-openclaw-device.mjs
 
 COPY supervisord.conf.template /etc/supervisor/conf.d/supervisord.conf
 
 COPY .nvmrc /.nvmrc
 
-CMD ["/bin/bash", "-lc", "set -euo pipefail; source /usr/local/nvm/nvm.sh && nvm use 24 >/dev/null && export NODE_PATH=\"$(npm root -g)\" && zx /root/bootstrap-openclaw.mjs; exec supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
+RUN mkdir -p /root/.c9
+COPY .c9/user.settings /root/.c9/user.settings
+
+CMD ["/bin/bash", "-lc", "set -euo pipefail; source /usr/local/nvm/nvm.sh && nvm use 24 >/dev/null && export NODE_PATH=\"$(npm root -g)\" && /root/bootstrap.sh"]
 
 EXPOSE 8080 8081 3399 18789

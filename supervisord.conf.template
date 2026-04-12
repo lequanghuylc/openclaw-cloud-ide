@@ -2,7 +2,8 @@
 nodaemon=true
 
 [program:pm2]
-command=/bin/bash -lc "source /usr/local/nvm/nvm.sh && nvm use 12 && exec pm2 start /root/c9sdk/server.js --name=\"c9sdk\" -- -w / -l 0.0.0.0 -p 3399 -a c9sdk:%(ENV_C9SDK_PASSWORD)s"
+command=/bin/bash -lc "source /usr/local/nvm/nvm.sh && nvm use 12 && export OPENAI_API_KEY=\"%(ENV_OPENAI_API_KEY)s\" && pm2 start /root/c9sdk/server.js --name=\"c9sdk\" -- -w / -l 0.0.0.0 -p 3399 -a c9sdk:%(ENV_C9SDK_PASSWORD)s && nvm use 24 && pm2 start /root/.openclaw/pm2.config.js --only openclaw-gateway && pm2 start /root/auto-approve-openclaw/pm2.config.js --only openclaw-auto-approve && pm2 start /var/www/html/ide-readme/pm2.config.js --only readme"
+priority=4
 
 [program:nginx]
 command=/bin/bash -lc "rm -f /etc/nginx/sites-enabled/*.template 2>/dev/null || true; nginx -s quit 2>/dev/null || true; nginx -g 'daemon off;'"
@@ -10,22 +11,3 @@ priority=20
 
 [program:cron]
 command=cron -f
-
-[program:openclaw-gateway]
-command=/bin/bash -lc "source /usr/local/nvm/nvm.sh && nvm use 24 && export OPENAI_API_KEY=\"%(ENV_OPENAI_API_KEY)s\" && exec openclaw gateway --bind lan --port 18789"
-autostart=true
-autorestart=true
-priority=5
-startsecs=3
-stdout_logfile=/var/log/supervisor/openclaw-gateway.log
-stderr_logfile=/var/log/supervisor/openclaw-gateway.err.log
-
-[program:openclaw-auto-approve]
-command=/bin/bash -lc "source /usr/local/nvm/nvm.sh && nvm use 24 && export NODE_PATH=\"$(npm root -g)\" && exec zx /root/auto-approve-openclaw-device.mjs"
-directory=/root/.openclaw
-autostart=true
-autorestart=false
-priority=8
-startsecs=5
-stdout_logfile=/var/log/supervisor/openclaw-auto-approve.log
-stderr_logfile=/var/log/supervisor/openclaw-auto-approve.err.log
