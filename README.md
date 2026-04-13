@@ -22,10 +22,11 @@ Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-p
 - **`OPENAI_API_KEY`**: OpenAI API key for the default model (`openai/gpt-5.4` in `openclaw.json.template`; change the model there if you prefer another OpenAI id)
 - **`C9SDK_PASSWORD`**: password for the c9sdk server (`c9sdk:$C9SDK_PASSWORD`)
 - **`OPENCLAW_GATEWAY_TOKEN`**: Token to used with Openclaw dashboard gateway
+- **`OPENCLAW_ALLOWED_ORIGIN`**: Optional. Extra Control UI CORS origins for the gateway (`gateway.controlUi.allowedOrigins` in generated `openclaw.json`). Use a comma-separated list (e.g. `https://app.example.com,https://other.example.com`). On every container start, `bootstrap-openclaw.mjs` merges these into the defaults from `openclaw.json.template` (localhost / `127.0.0.1`) without duplicating entries.
 
-On first start, `/root/bootstrap.sh` installs bundled [OpenClaw skills](https://docs.openclaw.ai/tools/creating-skills) from `included-skills/` into `/root/.openclaw/workspace/skills` (same layout as `~/.openclaw/workspace/skills/` in the docs), then `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`) even when env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
+On first start, `/root/bootstrap.sh` installs bundled [OpenClaw skills](https://docs.openclaw.ai/tools/creating-skills) from `included-skills/` into `/root/.openclaw/workspace/skills` (same layout as `~/.openclaw/workspace/skills/` in the docs), then `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`), merging `OPENCLAW_ALLOWED_ORIGIN` when set, even when other env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
 
-These envs are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to have other setup, just keep those env variables blank. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
+These envs `TELEGRAM_BOT_TOKEN` and `OPENAI_API_KEY` are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to have other setup, just keep those env variables blank. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
 
 ### Dashboard pairing (auto-approve)
 

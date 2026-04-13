@@ -16,7 +16,25 @@ await mkdir(WORKSPACE_DIR, { recursive: true });
 await writeFile(NVMRC_PATH, "24\n", "utf8");
 
 const template = await readFile(TEMPLATE_PATH, "utf8");
-const openclawJson = template.replaceAll("${TELEGRAM_BOT_TOKEN}", telegramBotToken);
+let openclawJson = template.replaceAll("${TELEGRAM_BOT_TOKEN}", telegramBotToken);
+
+const extraOriginRaw = process.env.OPENCLAW_ALLOWED_ORIGIN;
+if (extraOriginRaw != null && String(extraOriginRaw).trim() !== "") {
+  const extra = String(extraOriginRaw)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const cfg = JSON.parse(openclawJson);
+  cfg.gateway ??= {};
+  cfg.gateway.controlUi ??= {};
+  const existing = cfg.gateway.controlUi.allowedOrigins;
+  const merged = Array.isArray(existing) ? [...existing] : [];
+  for (const origin of extra) {
+    if (!merged.includes(origin)) merged.push(origin);
+  }
+  cfg.gateway.controlUi.allowedOrigins = merged;
+  openclawJson = `${JSON.stringify(cfg, null, 2)}\n`;
+}
 
 await writeFile(OUTPUT_PATH, openclawJson, {
   encoding: "utf8",

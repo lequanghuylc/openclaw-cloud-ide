@@ -7,6 +7,18 @@
       "workspace": "/root/.openclaw/workspace"
     }
   },
+  "models": {
+    "providers": {
+      "openai": {
+        "models": [
+          {
+            "id": "openai:gpt-5.4",
+            "name": "OpenAI GPT-5.4"
+          }
+        ]
+      }
+    }
+  },
   "channels": {
     "telegram": {
       "enabled": true,
@@ -16,6 +28,12 @@
   },
   "gateway": {
     "mode": "local",
-    "bind": "lan"
+    "bind": "lan",
+    "controlUi": {
+      "allowedOrigins": [
+        "http://localhost:18789",
+        "http://127.0.0.1:18789"
+      ]
+    }
   }
 }
