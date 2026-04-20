@@ -12,13 +12,16 @@ RUN bash -c 'source "$NVM_DIR/nvm.sh" \
     && npm install -g openclaw@latest zx@latest \
     && nvm alias default 12'
 
-# Runtime deps
+# Runtime deps + uv (https://docs.astral.sh/uv/) for skills that use `uv run` (e.g. searxng).
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         ca-certificates \
         cron \
         curl \
         supervisor \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && install -m 0755 /root/.local/bin/uv /usr/local/bin/uv \
+    && uv --version \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /var/www/html
@@ -39,7 +42,12 @@ RUN chmod +x /root/bootstrap.sh
 COPY scripts/install-included-skills.sh /var/www/html/scripts/install-included-skills.sh
 RUN chmod +x /var/www/html/scripts/install-included-skills.sh
 
+COPY scripts/install-searxng.sh /var/www/html/scripts/install-searxng.sh
+RUN chmod +x /var/www/html/scripts/install-searxng.sh
+
 COPY included-skills /var/www/html/included-skills
+
+RUN /var/www/html/scripts/install-searxng.sh
 
 COPY openclaw.json.template /root/openclaw.json.template
 

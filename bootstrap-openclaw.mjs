@@ -10,13 +10,48 @@ const OUTPUT_PATH = `${OPENCLAW_DIR}/openclaw.json`;
 
 const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN ?? "";
 
+function isPlainObject(value) {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+// Fill only missing keys from defaults; never overwrite existing user config.
+function applyDefaults(target, defaults) {
+  if (!isPlainObject(target) || !isPlainObject(defaults)) return target;
+  for (const [key, value] of Object.entries(defaults)) {
+    if (target[key] === undefined) {
+      target[key] = value;
+      continue;
+    }
+    if (isPlainObject(target[key]) && isPlainObject(value)) {
+      applyDefaults(target[key], value);
+    }
+  }
+  return target;
+}
+
 await mkdir(WORKSPACE_DIR, { recursive: true });
 
 // Pin Node 24 for shells that `cd` here (nvm + .nvmrc integration).
 await writeFile(NVMRC_PATH, "24\n", "utf8");
 
 const template = await readFile(TEMPLATE_PATH, "utf8");
-let openclawJson = template.replaceAll("${TELEGRAM_BOT_TOKEN}", telegramBotToken);
+const templatedJson = template.replaceAll("${TELEGRAM_BOT_TOKEN}", telegramBotToken);
+const templateCfg = JSON.parse(templatedJson);
+
+let cfg;
+try {
+  const existing = await readFile(OUTPUT_PATH, "utf8");
+  cfg = JSON.parse(existing);
+  applyDefaults(cfg, templateCfg);
+} catch {
+  cfg = templateCfg;
+}
+
+if (String(telegramBotToken).trim() !== "") {
+  cfg.channels ??= {};
+  cfg.channels.telegram ??= {};
+  cfg.channels.telegram.botToken = telegramBotToken;
+}
 
 const extraOriginRaw = process.env.OPENCLAW_ALLOWED_ORIGIN;
 if (extraOriginRaw != null && String(extraOriginRaw).trim() !== "") {
@@ -24,7 +59,6 @@ if (extraOriginRaw != null && String(extraOriginRaw).trim() !== "") {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  const cfg = JSON.parse(openclawJson);
   cfg.gateway ??= {};
   cfg.gateway.controlUi ??= {};
   const existing = cfg.gateway.controlUi.allowedOrigins;
@@ -33,8 +67,24 @@ if (extraOriginRaw != null && String(extraOriginRaw).trim() !== "") {
     if (!merged.includes(origin)) merged.push(origin);
   }
   cfg.gateway.controlUi.allowedOrigins = merged;
-  openclawJson = `${JSON.stringify(cfg, null, 2)}\n`;
 }
+
+const searxUrlRaw =
+  process.env.SEARXNG_URL != null ? String(process.env.SEARXNG_URL).trim() : "";
+const searxPortRaw =
+  process.env.SEARXNG_PORT != null ? String(process.env.SEARXNG_PORT).trim() : "";
+cfg.skills ??= {};
+cfg.skills.entries ??= {};
+cfg.skills.entries.searxng ??= {};
+cfg.skills.entries.searxng.enabled = true;
+cfg.skills.entries.searxng.env ??= {};
+if (searxUrlRaw !== "") {
+  cfg.skills.entries.searxng.env.SEARXNG_URL = searxUrlRaw;
+} else if (searxPortRaw !== "") {
+  cfg.skills.entries.searxng.env.SEARXNG_URL = `http://127.0.0.1:${searxPortRaw}`;
+}
+
+const openclawJson = `${JSON.stringify(cfg, null, 2)}\n`;
 
 await writeFile(OUTPUT_PATH, openclawJson, {
   encoding: "utf8",

@@ -1,6 +1,19 @@
 [supervisord]
 nodaemon=true
 
+[program:searxng]
+command=/bin/bash -lc "exec /opt/searxng/searx-pyenv/bin/python searx/webapp.py"
+directory=/opt/searxng/searxng-src
+environment=SEARXNG_SETTINGS_PATH="/etc/searxng/settings.yml"
+autostart=true
+autorestart=true
+startsecs=15
+priority=2
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
 [program:pm2]
 command=/bin/bash -lc "source /usr/local/nvm/nvm.sh && nvm use 12 && export OPENAI_API_KEY=\"${OPENAI_API_KEY:-}\" && pm2 start /root/c9sdk/server.js --name=\"c9sdk\" -- -w / -l 0.0.0.0 -p 3399 -a c9sdk:%(ENV_C9SDK_PASSWORD)s && nvm use 24 && pm2 start /root/.openclaw/pm2.config.js --only openclaw-gateway && pm2 start /root/auto-approve-openclaw/pm2.config.js --only openclaw-auto-approve && pm2 start /var/www/html/ide-readme/pm2.config.js --only readme"
 priority=4
