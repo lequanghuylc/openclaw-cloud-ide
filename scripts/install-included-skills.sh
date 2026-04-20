@@ -26,6 +26,12 @@ Environment (optional):
   OPENCLAW_WORKSPACE    Workspace root (default: \${OPENCLAW_HOME}/workspace)
   OPENCLAW_HOME         OpenClaw state dir (default: \$HOME/.openclaw)
 
+Also installs agent-browser (https://github.com/vercel-labs/agent-browser): npm install -g agent-browser,
+then agent-browser install (uses --with-deps on Linux), then:
+  npx skills add vercel-labs/agent-browser --agent openclaw -y
+from the parent directory of the skills destination (same OpenClaw layout as bundled skills).
+Requires npm/npx and network on first run.
+
 Options:
   -f, --force    Overwrite already installed skills
   -n, --dry-run  Show what would happen without copying files
@@ -120,6 +126,43 @@ for skill_path in "${skill_dirs[@]}"; do
     failed=$((failed + 1))
   fi
 done
+
+# agent-browser CLI + Chrome for Testing, then OpenClaw skill (see upstream README).
+# https://github.com/vercel-labs/agent-browser
+SKILLS_ROOT="$(dirname "$DEST_BASE")"
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "PLAN  agent-browser: would run npm install -g agent-browser (if not already on PATH)"
+  echo "PLAN  agent-browser: would run agent-browser install (with --with-deps on Linux)"
+  echo "PLAN  agent-browser: would run npx skills add vercel-labs/agent-browser --agent openclaw -y (cwd: $SKILLS_ROOT)"
+else
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "WARN  agent-browser: npm not on PATH; skipping CLI, Chrome setup, and npx skills add"
+  else
+    if command -v agent-browser >/dev/null 2>&1; then
+      echo "OK    agent-browser: CLI already on PATH"
+    else
+      echo "Installing agent-browser CLI globally..."
+      npm install -g agent-browser
+      hash -r 2>/dev/null || true
+    fi
+    if command -v agent-browser >/dev/null 2>&1; then
+      echo "Running agent-browser install (Chrome for Testing; first run may download)..."
+      if [[ "$(uname -s)" == "Linux" ]]; then
+        agent-browser install --with-deps
+      else
+        agent-browser install
+      fi
+      echo "Installing agent-browser skill for OpenClaw (npx skills add)..."
+      (
+        cd "$SKILLS_ROOT"
+        npx --yes skills add vercel-labs/agent-browser --agent openclaw -y
+      )
+    else
+      echo "WARN  agent-browser: install did not expose agent-browser on PATH; skipping install/skills steps" >&2
+    fi
+  fi
+fi
 
 echo
 echo "Summary: installed=$installed skipped=$skipped failed=$failed"
