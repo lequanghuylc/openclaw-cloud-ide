@@ -12,6 +12,13 @@ RUN bash -c 'source "$NVM_DIR/nvm.sh" \
     && npm install -g openclaw@latest zx@latest \
     && nvm alias default 12'
 
+# Preinstall agent-browser + browser dependencies at build-time so container
+# startup is not blocked by large runtime downloads.
+RUN bash -c 'source "$NVM_DIR/nvm.sh" \
+    && nvm use 24 \
+    && npm install -g agent-browser \
+    && agent-browser install --with-deps'
+
 # Runtime deps + uv (https://docs.astral.sh/uv/) for skills that use `uv run` (e.g. searxng).
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y \

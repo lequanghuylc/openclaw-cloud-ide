@@ -18,6 +18,18 @@ stderr_logfile_maxbytes=0
 command=/bin/bash -lc "source /usr/local/nvm/nvm.sh && nvm use 12 && export OPENAI_API_KEY=\"${OPENAI_API_KEY:-}\" && pm2 start /root/c9sdk/server.js --name=\"c9sdk\" -- -w / -l 0.0.0.0 -p 3399 -a c9sdk:%(ENV_C9SDK_PASSWORD)s && nvm use 24 && pm2 start /root/.openclaw/pm2.config.js --only openclaw-gateway && pm2 start /root/auto-approve-openclaw/pm2.config.js --only openclaw-auto-approve && pm2 start /var/www/html/ide-readme/pm2.config.js --only readme"
 priority=4
 
+[program:install-included-skills]
+command=/bin/bash -lc "source /usr/local/nvm/nvm.sh && nvm use 24 >/dev/null && exec /var/www/html/scripts/install-included-skills.sh"
+autostart=true
+autorestart=false
+startsecs=0
+exitcodes=0
+priority=30
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
 [program:nginx]
 command=/bin/bash -lc "rm -f /etc/nginx/sites-enabled/*.template 2>/dev/null || true; nginx -s quit 2>/dev/null || true; nginx -g 'daemon off;'"
 priority=20

@@ -131,8 +131,16 @@ write_settings() {
   fi
   if [[ -f "$SETTINGS" ]]; then
     local current_port
-    current_port="$(grep -E '^[[:space:]]*port:[[:space:]]*[0-9]+' "$SETTINGS" | head -1 | awk '{print $2}' || true)"
-    if [[ "${current_port:-}" == "$SEARXNG_PORT" ]]; then
+    local engines_patched
+    current_port="$(awk '/^[[:space:]]*port:[[:space:]]*[0-9]+/{print $2; exit}' "$SETTINGS" || true)"
+    engines_patched=1
+    for engine_name in ahmia torch wikidata; do
+      if ! grep -q "name:[[:space:]]*${engine_name}" "$SETTINGS"; then
+        engines_patched=0
+        break
+      fi
+    done
+    if [[ "${current_port:-}" == "$SEARXNG_PORT" && "$engines_patched" -eq 1 ]]; then
       echo "OK    SearXNG: ${SETTINGS} already uses port ${SEARXNG_PORT}, not rewriting"
       return 0
     fi

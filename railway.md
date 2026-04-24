@@ -11,6 +11,7 @@ This template gives you full control of your Openclaw
 
 - **`TELEGRAM_BOT_TOKEN`**: Telegram bot token from [@BotFather](https://t.me/BotFather)
 - **`OPENAI_API_KEY`**: OpenAI API key for the default model (`openai/gpt-5.4` in `openclaw.json.template`; change the model there if you prefer another OpenAI id)
+- **`INITIAL_OPENCLAW_VERSION`**: Optional. npm version to install for OpenClaw on first boot of a fresh `/root/.openclaw` volume (default: `latest`)
 
 These envs are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to have other setup, just keep those env variables blank. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
 

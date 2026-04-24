@@ -10,6 +10,7 @@ INCLUDED_DIR="${ROOT_DIR}/included-skills"
 OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 OPENCLAW_WORKSPACE="${OPENCLAW_WORKSPACE:-$OPENCLAW_HOME/workspace}"
 DEST_BASE="${OPENCLAW_SKILLS_DIR:-$OPENCLAW_WORKSPACE/skills}"
+INSTALL_AGENT_BROWSER_RUNTIME="${INSTALL_AGENT_BROWSER_RUNTIME:-0}"
 
 FORCE=0
 DRY_RUN=0
@@ -26,11 +27,21 @@ Environment (optional):
   OPENCLAW_WORKSPACE    Workspace root (default: \${OPENCLAW_HOME}/workspace)
   OPENCLAW_HOME         OpenClaw state dir (default: \$HOME/.openclaw)
 
+If a bundled skill declares name: mempalace (e.g. included-skills/mempalace-*), installs the
+mempalace CLI from PyPI (prefers uv tool install into /usr/local/bin, else pip). See SKILL.md.
+
 Also installs agent-browser (https://github.com/vercel-labs/agent-browser): npm install -g agent-browser,
 then agent-browser install (uses --with-deps on Linux), then:
   npx skills add vercel-labs/agent-browser --agent openclaw -y
 from the parent directory of the skills destination (same OpenClaw layout as bundled skills).
 Requires npm/npx and network on first run.
+
+Environment:
+  INSTALL_AGENT_BROWSER_RUNTIME
+      1 = run full agent-browser setup at runtime (CLI + browser + skill add)
+      0 = skip heavy setup; recommended when preinstalled in Docker image (default)
+  SKIP_MEMPALACE_CLI
+      1 = do not install the mempalace PyPI CLI even if a bundled mempalace skill is present (default: 0)
 
 Options:
   -f, --force    Overwrite already installed skills
@@ -127,6 +138,57 @@ for skill_path in "${skill_dirs[@]}"; do
   fi
 done
 
+# MemPalace: bundled skill (included-skills/mempalace-*) expects `mempalace` on PATH (PyPI package `mempalace`).
+# https://github.com/milla-jovovich/mempalace — SKILL metadata uses kind: uv, package: mempalace.
+SKIP_MEMPALACE_CLI="${SKIP_MEMPALACE_CLI:-0}"
+needs_mempalace=0
+for skill_path in "${skill_dirs[@]}"; do
+  [[ -d "$skill_path" ]] || continue
+  skill_md="$skill_path/SKILL.md"
+  [[ -f "$skill_md" ]] || continue
+  if grep -qE '^name:[[:space:]]*mempalace([[:space:]]|$)' "$skill_md" 2>/dev/null; then
+    needs_mempalace=1
+    break
+  fi
+done
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  if [[ "$needs_mempalace" -eq 1 ]]; then
+    echo "PLAN  mempalace: would ensure mempalace CLI on PATH (uv tool install or pip)"
+  fi
+elif [[ "$needs_mempalace" -eq 1 && "$SKIP_MEMPALACE_CLI" != "1" ]]; then
+  if command -v mempalace >/dev/null 2>&1; then
+    echo "OK    mempalace: CLI already on PATH"
+  else
+    echo "Installing mempalace CLI (PyPI: mempalace)..."
+    installed_via=""
+    if command -v uv >/dev/null 2>&1; then
+      if UV_TOOL_BIN_DIR="${UV_TOOL_BIN_DIR:-/usr/local/bin}" uv tool install mempalace; then
+        hash -r 2>/dev/null || true
+        if command -v mempalace >/dev/null 2>&1; then
+          installed_via="uv"
+        fi
+      fi
+    fi
+    if [[ -z "$installed_via" ]] && command -v python3 >/dev/null 2>&1; then
+      if python3 -m pip install -U mempalace; then
+        hash -r 2>/dev/null || true
+        installed_via="pip"
+      elif python3 -m pip install -U --break-system-packages mempalace; then
+        hash -r 2>/dev/null || true
+        installed_via="pip (--break-system-packages)"
+      fi
+    fi
+    if command -v mempalace >/dev/null 2>&1; then
+      echo "OK    mempalace: installed (${installed_via:-unknown})"
+    else
+      echo "WARN  mempalace: could not install CLI; ensure uv or pip and network, or set SKIP_MEMPALACE_CLI=1" >&2
+    fi
+  fi
+elif [[ "$needs_mempalace" -eq 1 && "$SKIP_MEMPALACE_CLI" == "1" ]]; then
+  echo "SKIP  mempalace: SKIP_MEMPALACE_CLI=1"
+fi
+
 # agent-browser CLI + Chrome for Testing, then OpenClaw skill (see upstream README).
 # https://github.com/vercel-labs/agent-browser
 SKILLS_ROOT="$(dirname "$DEST_BASE")"
@@ -136,31 +198,35 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "PLAN  agent-browser: would run agent-browser install (with --with-deps on Linux)"
   echo "PLAN  agent-browser: would run npx skills add vercel-labs/agent-browser --agent openclaw -y (cwd: $SKILLS_ROOT)"
 else
-  if ! command -v npm >/dev/null 2>&1; then
-    echo "WARN  agent-browser: npm not on PATH; skipping CLI, Chrome setup, and npx skills add"
-  else
-    if command -v agent-browser >/dev/null 2>&1; then
-      echo "OK    agent-browser: CLI already on PATH"
+  if [[ "$INSTALL_AGENT_BROWSER_RUNTIME" -eq 1 ]]; then
+    if ! command -v npm >/dev/null 2>&1; then
+      echo "WARN  agent-browser: npm not on PATH; skipping CLI, Chrome setup, and npx skills add"
     else
-      echo "Installing agent-browser CLI globally..."
-      npm install -g agent-browser
-      hash -r 2>/dev/null || true
-    fi
-    if command -v agent-browser >/dev/null 2>&1; then
-      echo "Running agent-browser install (Chrome for Testing; first run may download)..."
-      if [[ "$(uname -s)" == "Linux" ]]; then
-        agent-browser install --with-deps
+      if command -v agent-browser >/dev/null 2>&1; then
+        echo "OK    agent-browser: CLI already on PATH"
       else
-        agent-browser install
+        echo "Installing agent-browser CLI globally..."
+        npm install -g agent-browser
+        hash -r 2>/dev/null || true
       fi
-      echo "Installing agent-browser skill for OpenClaw (npx skills add)..."
-      (
-        cd "$SKILLS_ROOT"
-        npx --yes skills add vercel-labs/agent-browser --agent openclaw -y
-      )
-    else
-      echo "WARN  agent-browser: install did not expose agent-browser on PATH; skipping install/skills steps" >&2
+      if command -v agent-browser >/dev/null 2>&1; then
+        echo "Running agent-browser install (Chrome for Testing; first run may download)..."
+        if [[ "$(uname -s)" == "Linux" ]]; then
+          agent-browser install --with-deps
+        else
+          agent-browser install
+        fi
+        echo "Installing agent-browser skill for OpenClaw (npx skills add)..."
+        (
+          cd "$SKILLS_ROOT"
+          npx --yes skills add vercel-labs/agent-browser --agent openclaw -y
+        )
+      else
+        echo "WARN  agent-browser: install did not expose agent-browser on PATH; skipping install/skills steps" >&2
+      fi
     fi
+  else
+    echo "SKIP  agent-browser: runtime setup disabled (set INSTALL_AGENT_BROWSER_RUNTIME=1 to enable)"
   fi
 fi
 
