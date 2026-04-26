@@ -88,10 +88,22 @@ install_cursor() {
     (cd "$CURSOR_HOME" && "$appimage" --appimage-extract >/dev/null)
   fi
 
-  # Launcher: AppImages and Electron run as root require --no-sandbox.
+  # Launcher flags:
+  #   --no-sandbox        Electron's setuid sandbox is unavailable when running
+  #                       as root inside the container; without this, Cursor
+  #                       refuses to start and no login can happen.
+  #   --password-store=basic
+  #                       Force Electron's safeStorage onto an encrypted file
+  #                       under the user data dir instead of libsecret /
+  #                       gnome-keyring (no keyring daemon runs in this image),
+  #                       so the Cursor account session token actually
+  #                       persists across restarts.
   cat >/usr/local/bin/cursor <<'LAUNCHER'
 #!/usr/bin/env bash
-exec /opt/cursor/squashfs-root/AppRun --no-sandbox "$@"
+exec /opt/cursor/squashfs-root/AppRun \
+  --no-sandbox \
+  --password-store=basic \
+  "$@"
 LAUNCHER
   chmod +x /usr/local/bin/cursor
 

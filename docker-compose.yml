@@ -21,7 +21,9 @@ services:
       INITIAL_OPENCLAW_VERSION: ${INITIAL_OPENCLAW_VERSION:-latest}
     volumes:
       - openclaw_data:/root/.openclaw
+      - cursor_config:/root/.config/Cursor
     restart: unless-stopped
 
 volumes:
   openclaw_data:
+  cursor_config:
