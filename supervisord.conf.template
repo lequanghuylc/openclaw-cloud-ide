@@ -36,3 +36,48 @@ priority=20
 
 [program:cron]
 command=cron -f
+
+[program:xvfb]
+command=/usr/bin/Xvfb :1 -screen 0 1920x1080x24 -ac +extension GLX +extension RANDR +render -noreset
+autostart=true
+autorestart=true
+priority=5
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:xfce]
+command=/usr/local/bin/start-xfce-session.sh
+environment=DISPLAY=":1",HOME="/root",USER="root",XDG_RUNTIME_DIR="/tmp/runtime-root"
+autostart=true
+autorestart=true
+startsecs=5
+priority=6
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:x11vnc]
+command=/usr/bin/x11vnc -display :1 -forever -shared -rfbport 5901 -localhost -nopw -xkb
+environment=DISPLAY=":1"
+autostart=true
+autorestart=true
+startsecs=3
+priority=7
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:novnc]
+command=/usr/bin/websockify --web=/opt/novnc 6080 127.0.0.1:5901
+autostart=true
+autorestart=true
+startsecs=3
+priority=8
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
