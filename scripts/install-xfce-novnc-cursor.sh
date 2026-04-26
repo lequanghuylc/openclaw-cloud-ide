@@ -16,7 +16,7 @@ NOVNC_HOME="${NOVNC_HOME:-/opt/novnc}"
 NOVNC_VERSION="${NOVNC_VERSION:-1.5.0}"
 WEBSOCKIFY_VERSION="${WEBSOCKIFY_VERSION:-0.12.0}"
 CURSOR_HOME="${CURSOR_HOME:-/opt/cursor}"
-CURSOR_APPIMAGE_URL="${CURSOR_APPIMAGE_URL:-https://downloader.cursor.sh/linux/appImage/x64}"
+CURSOR_APPIMAGE_URL="${CURSOR_APPIMAGE_URL:-https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "install-xfce-novnc-cursor.sh: must run as root" >&2
@@ -74,12 +74,27 @@ install_novnc_static() {
   fi
 }
 
+resolve_cursor_appimage_url() {
+  local url="$1"
+
+  if [[ "$url" != *"/api/download"* ]]; then
+    printf '%s\n' "$url"
+    return
+  fi
+
+  curl -fsSL -A 'Mozilla/5.0' "$url" \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["downloadUrl"])'
+}
+
 install_cursor() {
   mkdir -p "$CURSOR_HOME"
   local appimage="${CURSOR_HOME}/cursor.AppImage"
   if [[ ! -f "$appimage" ]]; then
-    echo "Downloading Cursor AppImage from ${CURSOR_APPIMAGE_URL}"
-    curl -fL --retry 3 --retry-delay 2 -o "$appimage" "$CURSOR_APPIMAGE_URL"
+    local download_url
+    download_url="$(resolve_cursor_appimage_url "$CURSOR_APPIMAGE_URL")"
+
+    echo "Downloading Cursor AppImage from ${download_url}"
+    curl -fL --retry 3 --retry-delay 2 -o "$appimage" "$download_url"
     chmod +x "$appimage"
   fi
 
@@ -93,10 +108,10 @@ install_cursor() {
   #                       as root inside the container; without this, Cursor
   #                       refuses to start and no login can happen.
   #   --password-store=basic
-  #                       Force Electron's safeStorage onto an encrypted file
-  #                       under the user data dir instead of libsecret /
-  #                       gnome-keyring (no keyring daemon runs in this image),
-  #                       so the Cursor account session token actually
+  #                       Force Electron's safeStorage onto a local file-backed
+  #                       store instead of libsecret / gnome-keyring (no
+  #                       keyring daemon runs in this image), so the Cursor
+  #                       account session token actually
   #                       persists across restarts.
   cat >/usr/local/bin/cursor <<'LAUNCHER'
 #!/usr/bin/env bash

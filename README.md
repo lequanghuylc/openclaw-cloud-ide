@@ -75,14 +75,14 @@ inside the container from your browser.
 - A **Cursor** launcher is on the desktop and in the XFCE Applications menu.
   It runs `/opt/cursor/cursor.AppImage` extracted under `/opt/cursor/squashfs-root`
   via `/usr/local/bin/cursor`. The launcher passes `--no-sandbox` (Electron's
-  setuid sandbox is unavailable as root) and `--password-store=basic` (use an
-  encrypted file under the user data dir instead of libsecret/gnome-keyring,
+  setuid sandbox is unavailable as root) and `--password-store=basic` (use a
+  local file-backed store under the user data dir instead of libsecret/gnome-keyring,
   which is not running in this image) so your Cursor login persists.
 - The Cursor user data dir (`/root/.config/Cursor`) is mounted as a Docker
   volume (`cursor_config`) in `docker-compose.yml`, so your account session,
   settings, and extensions survive container recreation.
 - To pin a Cursor build, override `CURSOR_APPIMAGE_URL` at build time. The
-  default points at the official channel: `https://downloader.cursor.sh/linux/appImage/x64`.
+  default resolves the stable Linux AppImage from `https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable`.
 
 ## Node / nvm
 
