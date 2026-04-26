@@ -53,9 +53,14 @@ RUN chmod +x /var/www/html/scripts/install-included-skills.sh
 COPY scripts/install-searxng.sh /var/www/html/scripts/install-searxng.sh
 RUN chmod +x /var/www/html/scripts/install-searxng.sh
 
+COPY scripts/install-xfce-novnc-cursor.sh /var/www/html/scripts/install-xfce-novnc-cursor.sh
+RUN chmod +x /var/www/html/scripts/install-xfce-novnc-cursor.sh
+
 COPY included-skills /var/www/html/included-skills
 
 RUN /var/www/html/scripts/install-searxng.sh
+
+RUN /var/www/html/scripts/install-xfce-novnc-cursor.sh
 
 COPY openclaw.json.template /root/openclaw.json.template
 
@@ -71,4 +76,4 @@ COPY .c9/user.settings /root/.c9/user.settings
 
 CMD ["/bin/bash", "-lc", "set -euo pipefail; source /usr/local/nvm/nvm.sh && nvm use 24 >/dev/null && export NODE_PATH=\"$(npm root -g)\" && /root/bootstrap.sh"]
 
-EXPOSE 8080 8081 3399 18789
+EXPOSE 8080 8081 3399 18789 6080
