@@ -42,6 +42,7 @@ COPY nginx-conf/project.conf /etc/nginx/sites-enabled/
 
 COPY bootstrap-openclaw.mjs /root/bootstrap-openclaw.mjs
 RUN chmod +x /root/bootstrap-openclaw.mjs
+COPY bootstrap-openclaw-config.mjs /root/bootstrap-openclaw-config.mjs
 
 COPY bootstrap.sh /root/bootstrap.sh
 RUN chmod +x /root/bootstrap.sh

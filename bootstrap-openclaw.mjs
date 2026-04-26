@@ -1,5 +1,6 @@
 #!/usr/bin/env zx
 import { mkdir, readFile, writeFile, chmod } from "node:fs/promises";
+import { applyCustomProviderFromEnv } from "./bootstrap-openclaw-config.mjs";
 
 const OPENCLAW_DIR = "/root/.openclaw";
 const WORKSPACE_DIR = `${OPENCLAW_DIR}/workspace`;
@@ -83,6 +84,8 @@ if (searxUrlRaw !== "") {
 } else if (searxPortRaw !== "") {
   cfg.skills.entries.searxng.env.SEARXNG_URL = `http://127.0.0.1:${searxPortRaw}`;
 }
+
+applyCustomProviderFromEnv(cfg);
 
 const openclawJson = `${JSON.stringify(cfg, null, 2)}\n`;
 

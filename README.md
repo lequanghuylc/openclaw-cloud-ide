@@ -19,15 +19,40 @@ Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-p
 ## Environment variables
 
 - **`TELEGRAM_BOT_TOKEN`**: Telegram bot token from [@BotFather](https://t.me/BotFather)
-- **`OPENAI_API_KEY`**: OpenAI API key for the default model (`openai/gpt-5.4` in `openclaw.json.template`; change the model there if you prefer another OpenAI id)
+- **`OPENAI_API_KEY`**: OpenAI API key for the default model (`openai/gpt-5.4` in `openclaw.json.template`). Leave blank when using only a custom provider; the bootstrap script removes the default OpenAI provider config when this is blank.
 - **`C9SDK_PASSWORD`**: password for the c9sdk server (`c9sdk:$C9SDK_PASSWORD`)
 - **`OPENCLAW_GATEWAY_TOKEN`**: Token to used with Openclaw dashboard gateway
 - **`OPENCLAW_ALLOWED_ORIGIN`**: Optional. Extra Control UI CORS origins for the gateway (`gateway.controlUi.allowedOrigins` in generated `openclaw.json`). Use a comma-separated list (e.g. `https://app.example.com,https://other.example.com`). On every container start, `bootstrap-openclaw.mjs` merges these into the defaults from `openclaw.json.template` (localhost / `127.0.0.1`) without duplicating entries.
 - **`INITIAL_OPENCLAW_VERSION`**: Optional. npm version to install for OpenClaw on first boot of a fresh `/root/.openclaw` volume. Defaults to `latest` (examples: `latest`, `0.4.7`).
+- **`CUSTOM_PROVIDER_*`**: Optional. Adds one OpenAI-compatible custom model provider to generated `openclaw.json` on every container start, so you can use providers such as KRouter without SSH access.
 
-On first start, `/root/bootstrap.sh` installs `openclaw@${INITIAL_OPENCLAW_VERSION:-latest}` once per `/root/.openclaw` volume, then installs bundled [OpenClaw skills](https://docs.openclaw.ai/tools/creating-skills) from `included-skills/` into `/root/.openclaw/workspace/skills` (same layout as `~/.openclaw/workspace/skills/` in the docs). After that, `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`), merging `OPENCLAW_ALLOWED_ORIGIN` when set, even when other env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
+On first start, `/root/bootstrap.sh` installs `openclaw@${INITIAL_OPENCLAW_VERSION:-latest}` once per `/root/.openclaw` volume, then installs bundled [OpenClaw skills](https://docs.openclaw.ai/tools/creating-skills) from `included-skills/` into `/root/.openclaw/workspace/skills` (same layout as `~/.openclaw/workspace/skills/` in the docs). After that, `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`), merging `OPENCLAW_ALLOWED_ORIGIN` and `CUSTOM_PROVIDER_*` when set, even when other env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
 
-These envs `TELEGRAM_BOT_TOKEN` and `OPENAI_API_KEY` are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to have other setup, just keep those env variables blank. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
+These envs `TELEGRAM_BOT_TOKEN` and `OPENAI_API_KEY` are setup for convenient reasons, since ChatGPT and Telegram is mostly used. If you want to use another model provider, keep `OPENAI_API_KEY` blank and set `CUSTOM_PROVIDER_*`. Once you have access to the C9 IDE, check [Openclaw's Offcial Docs](https://docs.openclaw.ai/) to know how to connect different AI models and message channels.
+
+### Custom model provider
+
+Set these variables to add one custom OpenAI-compatible provider without editing `/root/.openclaw/openclaw.json` manually:
+
+```env
+CUSTOM_PROVIDER_NAME=krouter
+CUSTOM_PROVIDER_API_KEY=your-api-key
+CUSTOM_PROVIDER_BASE_URL=https://api.krouter.net/v1
+CUSTOM_PROVIDER_MODEL_ID=cx/gpt-5.5
+```
+
+Optional variables:
+
+```env
+CUSTOM_PROVIDER_AUTH=api-key
+CUSTOM_PROVIDER_API=openai-completions
+CUSTOM_PROVIDER_MODEL_NAME=cx/gpt-5.5
+CUSTOM_PROVIDER_MODEL_API=openai-completions
+```
+
+If omitted, `CUSTOM_PROVIDER_AUTH` defaults to `api-key`, `CUSTOM_PROVIDER_API` defaults to `openai-completions`, `CUSTOM_PROVIDER_MODEL_NAME` defaults to `CUSTOM_PROVIDER_MODEL_ID`, and `CUSTOM_PROVIDER_MODEL_API` defaults to `CUSTOM_PROVIDER_API`.
+
+When these variables are set, the generated default model becomes `CUSTOM_PROVIDER_NAME/CUSTOM_PROVIDER_MODEL_ID` (for example, `krouter/cx/gpt-5.5`). If `OPENAI_API_KEY` is blank, the generated config also removes the default OpenAI provider and OpenAI plugin entry.
 
 ### Dashboard pairing (auto-approve)
 

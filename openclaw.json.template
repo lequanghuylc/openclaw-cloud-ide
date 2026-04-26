@@ -37,6 +37,13 @@
       "dmPolicy": "pairing"
     }
   },
+  "plugins": {
+    "entries": {
+      "bonjour": {
+        "enabled": false
+      }
+    }
+  },
   "gateway": {
     "mode": "local",
     "bind": "lan",

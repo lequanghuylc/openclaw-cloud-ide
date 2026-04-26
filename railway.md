@@ -34,13 +34,28 @@ This Railway template packages OpenClaw, a gateway dashboard, and a C9-style fil
 After deploying, set the environment variables that match how you want to use OpenClaw, some of the env is already populated:
 
 - `TELEGRAM_BOT_TOKEN`: Telegram bot token from BotFather.
-- `OPENAI_API_KEY`: OpenAI API key for the default model setup.
+- `OPENAI_API_KEY`: OpenAI API key for the default model setup. Leave blank when using only a custom provider.
 - `C9SDK_PASSWORD`: Password for the browser file manager.
 - `OPENCLAW_GATEWAY_TOKEN`: Token used to access the OpenClaw gateway dashboard.
 - `INITIAL_OPENCLAW_VERSION`: Optional OpenClaw npm version to install on first boot. Defaults to `2026.4.22`. (At the time the template is published 2026.4.23 is beta and buggy)
 - `OPENCLAW_ALLOWED_ORIGIN`: Optional extra allowed origins for the control UI.
+- `CUSTOM_PROVIDER_NAME`: Optional custom OpenAI-compatible provider name, such as `krouter`.
+- `CUSTOM_PROVIDER_API_KEY`: API key for the custom provider.
+- `CUSTOM_PROVIDER_BASE_URL`: Base URL for the custom provider, such as `https://api.krouter.net/v1`.
+- `CUSTOM_PROVIDER_MODEL_ID`: Model id for the custom provider, such as `cx/gpt-5.5`.
 
 For the fastest start, deploy the template on Railway, fill in the environment variables you need, open the generated Railway domain, and then use the file manager when you want to adjust OpenClaw settings, install integrations, inspect logs, or work with bundled skills.
+
+To add a provider such as KRouter without opening the file manager or SSHing into the container, set:
+
+```env
+CUSTOM_PROVIDER_NAME=krouter
+CUSTOM_PROVIDER_API_KEY=your-api-key
+CUSTOM_PROVIDER_BASE_URL=https://api.krouter.net/v1
+CUSTOM_PROVIDER_MODEL_ID=cx/gpt-5.5
+```
+
+On every container start, the bootstrap script merges those values into `models.providers` in `/root/.openclaw/openclaw.json` and sets the default model to `CUSTOM_PROVIDER_NAME/CUSTOM_PROVIDER_MODEL_ID`, such as `krouter/cx/gpt-5.5`. If `OPENAI_API_KEY` is blank, it also removes the default OpenAI provider and OpenAI plugin entry. Advanced optional variables are `CUSTOM_PROVIDER_AUTH` (default `api-key`), `CUSTOM_PROVIDER_API` (default `openai-completions`), `CUSTOM_PROVIDER_MODEL_NAME` (default same as model id), and `CUSTOM_PROVIDER_MODEL_API` (default same as provider API).
 
 **Dashboard pairing (auto-approve)**
 
