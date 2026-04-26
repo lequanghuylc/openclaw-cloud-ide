@@ -15,6 +15,7 @@ Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-p
 - **OpenClaw gateway (direct)**: `18789` (optional; exposed in Compose)
 - **c9sdk (nginx proxy)**: `8081` → `3399`
 - **c9sdk (direct)**: `3399`
+- **noVNC (XFCE desktop with Cursor)**: `6080` → web client at `http://localhost:6080/vnc.html`
 
 ## Environment variables
 
@@ -38,6 +39,21 @@ Also for convenient setup, please follow the steps here:
 - Wait for a bit, or check logs in the IDE: `pm2 logs openclaw-auto-approve` (look for `approved successfully, exiting`), or `pm2 logs readme` for a short usage summary
 - Login again, now you can access the dashboard
 
+## Desktop (XFCE + noVNC + Cursor)
+
+The image bundles an XFCE4 desktop served over noVNC so you can use **Cursor**
+inside the container from your browser.
+
+- Open `http://localhost:6080/vnc.html` and click **Connect** (no password by
+  default — `x11vnc` binds to `127.0.0.1` and is reachable only through
+  websockify/noVNC on the published port).
+- A **Cursor** launcher is on the desktop and in the XFCE Applications menu.
+  It runs `/opt/cursor/cursor.AppImage` extracted under `/opt/cursor/squashfs-root`
+  via `/usr/local/bin/cursor` (Electron `--no-sandbox` is set because the
+  container runs as root).
+- To pin a Cursor build, override `CURSOR_APPIMAGE_URL` at build time. The
+  default points at the official channel: `https://downloader.cursor.sh/linux/appImage/x64`.
+
 ## Node / nvm
 
 This has NVM installed. Openclaw is running Nodejs 24, while C9 IDE uses Nodejs 12. In some cases you can not access `openclaw` via cli, try to run `nvm use 24` first.
@@ -59,7 +75,7 @@ docker compose up -d --build
 docker build -t openclaw-with-file-manager .
 
 docker run --rm \
-  -p 8080:8080 -p 8081:8081 -p 3399:3399 -p 18789:18789 \
+  -p 8080:8080 -p 8081:8081 -p 3399:3399 -p 18789:18789 -p 6080:6080 \
   -e TELEGRAM_BOT_TOKEN="your-token" \
   -e OPENAI_API_KEY="your-key" \
   -e C9SDK_PASSWORD=changeme \
