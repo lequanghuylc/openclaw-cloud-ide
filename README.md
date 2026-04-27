@@ -81,6 +81,13 @@ inside the container from your browser.
 - The Cursor user data dir (`/root/.config/Cursor`) is mounted as a Docker
   volume (`cursor_config`) in `docker-compose.yml`, so your account session,
   settings, and extensions survive container recreation.
+- Cursor login links open with the existing Chrome install through
+  `/usr/local/bin/default-browser`, which adds Chrome's required `--no-sandbox`
+  flag when running as root. XFCE's preferred browser is set to Debian's
+  sensible browser helper, so the Applications menu follows the same wrapper.
+- After logging in, run `/root/.config/Cursor/export-cursor-auth.mjs` to write
+  `/root/.config/Cursor/cursor-auth.json` with the access token, refresh token,
+  cached email, and `telemetry.machineId` for later use.
 - To pin a Cursor build, override `CURSOR_APPIMAGE_URL` at build time. The
   default resolves the stable Linux AppImage from `https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable`.
 

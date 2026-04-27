@@ -55,6 +55,8 @@ install_apt_deps() {
     fuse \
     file \
     wget \
+    xdg-utils \
+    sqlite3 \
     curl \
     ca-certificates
   rm -rf /var/lib/apt/lists/*
@@ -115,6 +117,7 @@ install_cursor() {
   #                       persists across restarts.
   cat >/usr/local/bin/cursor <<'LAUNCHER'
 #!/usr/bin/env bash
+export BROWSER="${BROWSER:-/usr/local/bin/default-browser}"
 exec /opt/cursor/squashfs-root/AppRun \
   --no-sandbox \
   --password-store=basic \
@@ -146,6 +149,117 @@ DESKTOP
   fi
 }
 
+configure_default_browser() {
+  local chrome_bin=""
+  if command -v google-chrome >/dev/null 2>&1; then
+    chrome_bin="$(command -v google-chrome)"
+  elif command -v google-chrome-stable >/dev/null 2>&1; then
+    chrome_bin="$(command -v google-chrome-stable)"
+  fi
+
+  if [[ -z "$chrome_bin" ]]; then
+    echo "WARN  Google Chrome not found; Cursor login URLs may not open automatically" >&2
+    return
+  fi
+
+  cat >/usr/local/bin/default-browser <<BROWSER
+#!/usr/bin/env bash
+exec "$chrome_bin" --no-sandbox "\$@"
+BROWSER
+  chmod +x /usr/local/bin/default-browser
+
+  cat >/usr/share/applications/default-browser.desktop <<'DESKTOP'
+[Desktop Entry]
+Name=Default Browser
+Comment=Open web links in Chrome
+Exec=/usr/local/bin/default-browser %U
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+DESKTOP
+
+  mkdir -p /root/.config
+  cat >/root/.config/mimeapps.list <<'MIMEAPPS'
+[Default Applications]
+text/html=default-browser.desktop
+text/xml=default-browser.desktop
+application/xhtml+xml=default-browser.desktop
+x-scheme-handler/http=default-browser.desktop
+x-scheme-handler/https=default-browser.desktop
+MIMEAPPS
+
+  mkdir -p /root/.config/xfce4
+  cat >/root/.config/xfce4/helpers.rc <<'HELPERS'
+WebBrowser=debian-sensible-browser
+HELPERS
+}
+
+write_cursor_auth_exporter() {
+  mkdir -p /root/.config/Cursor
+
+  cat >/root/.config/Cursor/export-cursor-auth.mjs <<'EXPORTER'
+#!/usr/bin/env zx
+import { chmod, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { $ } from "zx";
+
+const CURSOR_CONFIG_DIR = "/root/.config/Cursor";
+const GLOBAL_STORAGE_DIR = `${CURSOR_CONFIG_DIR}/User/globalStorage`;
+const STATE_DB = `${GLOBAL_STORAGE_DIR}/state.vscdb`;
+const STORAGE_JSON = `${GLOBAL_STORAGE_DIR}/storage.json`;
+const OUTPUT_FILE = "/root/.config/Cursor/cursor-auth.json";
+
+async function ensureSqlite3() {
+  try {
+    await $`command -v sqlite3`;
+  } catch {
+    await $`apt-get update`;
+    await $`apt-get install -y sqlite3`;
+  }
+}
+
+async function readSqliteValue(key) {
+  const sql = `select value from ItemTable where key='${key.replaceAll("'", "''")}';`;
+  const result = await $`sqlite3 ${STATE_DB} ${sql}`;
+  return result.stdout.trimEnd();
+}
+
+async function readMachineId() {
+  const storage = JSON.parse(await readFile(STORAGE_JSON, "utf8"));
+  return storage["telemetry.machineId"] ?? "";
+}
+
+function assertExists(file, description) {
+  if (!existsSync(file)) {
+    throw new Error(`${description} not found at ${file}. Log in to Cursor first, then rerun this script.`);
+  }
+}
+
+async function main() {
+  await ensureSqlite3();
+  assertExists(STATE_DB, "Cursor auth database");
+  assertExists(STORAGE_JSON, "Cursor storage file");
+
+  const auth = {
+    accessToken: await readSqliteValue("cursorAuth/accessToken"),
+    refreshToken: await readSqliteValue("cursorAuth/refreshToken"),
+    cachedEmail: await readSqliteValue("cursorAuth/cachedEmail"),
+    machineId: await readMachineId(),
+  };
+
+  await writeFile(OUTPUT_FILE, `${JSON.stringify(auth, null, 2)}\n`, "utf8");
+  await chmod(OUTPUT_FILE, 0o600);
+
+  console.log(`Wrote Cursor auth info to ${OUTPUT_FILE}`);
+}
+
+await main();
+EXPORTER
+
+  chmod +x /root/.config/Cursor/export-cursor-auth.mjs
+}
+
 write_desktop_shortcut() {
   # Drop a Cursor launcher on the XFCE Desktop for the root user (the user that
   # noVNC logs in as) so it is one click away after first login.
@@ -162,6 +276,7 @@ write_xstartup() {
 set -euo pipefail
 export DISPLAY="${DISPLAY:-:1}"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/runtime-root}"
+export BROWSER="${BROWSER:-/usr/local/bin/default-browser}"
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 # Disable screensaver/lock so the noVNC session never gets a black screen.
@@ -175,6 +290,8 @@ XSTART
 install_apt_deps
 install_novnc_static
 install_cursor
+configure_default_browser
+write_cursor_auth_exporter
 write_desktop_shortcut
 write_xstartup
 
