@@ -60,8 +60,8 @@ stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
 
 [program:x11vnc]
-command=/usr/bin/x11vnc -display :1 -forever -shared -rfbport 5901 -localhost -nopw -xkb
-environment=DISPLAY=":1"
+command=/usr/local/bin/start-x11vnc.sh
+environment=DISPLAY=":1",VNC_PORT="5901",VNC_PASSWORD="%(ENV_VNC_PASSWORD)s"
 autostart=true
 autorestart=true
 startsecs=3

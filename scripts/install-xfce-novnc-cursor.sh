@@ -260,6 +260,34 @@ EXPORTER
   chmod +x /root/.config/Cursor/export-cursor-auth.mjs
 }
 
+write_x11vnc_startup() {
+  cat >/usr/local/bin/start-x11vnc.sh <<'VNCSTART'
+#!/usr/bin/env bash
+set -euo pipefail
+
+base_args=(
+  -display "${DISPLAY:-:1}"
+  -forever
+  -shared
+  -rfbport "${VNC_PORT:-5901}"
+  -localhost
+  -xkb
+)
+
+if [[ -n "${VNC_PASSWORD:-}" ]]; then
+  passwd_file="/root/.vnc/passwd"
+  mkdir -p "$(dirname "$passwd_file")"
+  x11vnc -storepasswd "$VNC_PASSWORD" "$passwd_file" >/dev/null
+  chmod 600 "$passwd_file"
+  exec /usr/bin/x11vnc "${base_args[@]}" -passwdfile "$passwd_file"
+fi
+
+exec /usr/bin/x11vnc "${base_args[@]}" -nopw
+VNCSTART
+
+  chmod +x /usr/local/bin/start-x11vnc.sh
+}
+
 write_desktop_shortcut() {
   # Drop a Cursor launcher on the XFCE Desktop for the root user (the user that
   # noVNC logs in as) so it is one click away after first login.
@@ -292,6 +320,7 @@ install_novnc_static
 install_cursor
 configure_default_browser
 write_cursor_auth_exporter
+write_x11vnc_startup
 write_desktop_shortcut
 write_xstartup
 

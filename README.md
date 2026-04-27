@@ -25,6 +25,7 @@ Docker image based on [c9sdk-pm2-ubuntu](https://github.com/lequanghuylc/c9sdk-p
 - **`OPENCLAW_GATEWAY_TOKEN`**: Token to used with Openclaw dashboard gateway
 - **`OPENCLAW_ALLOWED_ORIGIN`**: Optional. Extra Control UI CORS origins for the gateway (`gateway.controlUi.allowedOrigins` in generated `openclaw.json`). Use a comma-separated list (e.g. `https://app.example.com,https://other.example.com`). On every container start, `bootstrap-openclaw.mjs` merges these into the defaults from `openclaw.json.template` (localhost / `127.0.0.1`) without duplicating entries.
 - **`INITIAL_OPENCLAW_VERSION`**: Optional. npm version to install for OpenClaw on first boot of a fresh `/root/.openclaw` volume. Defaults to `latest` (examples: `latest`, `0.4.7`).
+- **`VNC_PASSWORD`**: Optional. Password required by the noVNC desktop connection. Leave blank to keep the no-password local default.
 - **`CUSTOM_PROVIDER_*`**: Optional. Adds one OpenAI-compatible custom model provider to generated `openclaw.json` on every container start, so you can use providers such as KRouter without SSH access.
 
 On first start, `/root/bootstrap.sh` installs `openclaw@${INITIAL_OPENCLAW_VERSION:-latest}` once per `/root/.openclaw` volume, then installs bundled [OpenClaw skills](https://docs.openclaw.ai/tools/creating-skills) from `included-skills/` into `/root/.openclaw/workspace/skills` (same layout as `~/.openclaw/workspace/skills/` in the docs). After that, `/root/bootstrap-openclaw.mjs` writes `/root/.openclaw/openclaw.json` from `openclaw.json.template` (Telegram channel + gateway `local` / `lan`), merging `OPENCLAW_ALLOWED_ORIGIN` and `CUSTOM_PROVIDER_*` when set, even when other env vars are not set yet (fresh install writes empty token values), persist `/root/.openclaw` if you want stable pairing and sessions.
@@ -69,9 +70,9 @@ Also for convenient setup, please follow the steps here:
 The image bundles an XFCE4 desktop served over noVNC so you can use **Cursor**
 inside the container from your browser.
 
-- Open `http://localhost:6080/vnc.html` and click **Connect** (no password by
-  default — `x11vnc` binds to `127.0.0.1` and is reachable only through
-  websockify/noVNC on the published port).
+- Open `http://localhost:6080/vnc.html` and click **Connect**. Set
+  `VNC_PASSWORD` to require a VNC password; leave it empty for the no-password
+  local default.
 - A **Cursor** launcher is on the desktop and in the XFCE Applications menu.
   It runs `/opt/cursor/cursor.AppImage` extracted under `/opt/cursor/squashfs-root`
   via `/usr/local/bin/cursor`. The launcher passes `--no-sandbox` (Electron's
@@ -116,5 +117,6 @@ docker run --rm \
   -e TELEGRAM_BOT_TOKEN="your-token" \
   -e OPENAI_API_KEY="your-key" \
   -e C9SDK_PASSWORD=changeme \
+  -e VNC_PASSWORD=changeme \
   openclaw-with-file-manager
 ```
