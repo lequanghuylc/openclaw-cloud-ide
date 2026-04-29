@@ -75,22 +75,47 @@ inside the container from your browser.
   local default.
 - A **Cursor** launcher is on the desktop and in the XFCE Applications menu.
   It runs `/opt/cursor/cursor.AppImage` extracted under `/opt/cursor/squashfs-root`
-  via `/usr/local/bin/cursor`. The launcher passes `--no-sandbox` (Electron's
-  setuid sandbox is unavailable as root) and `--password-store=basic` (use a
-  local file-backed store under the user data dir instead of libsecret/gnome-keyring,
-  which is not running in this image) so your Cursor login persists.
+  via `/usr/local/bin/cursor`. The launcher passes `--no-sandbox`,
+  `--disable-gpu`, `--disable-software-rasterizer`, and
+  `--disable-dev-shm-usage` for noVNC/container stability, plus
+  `--password-store=basic` so Cursor login persists without requiring
+  libsecret/gnome-keyring services.
 - The Cursor user data dir (`/root/.config/Cursor`) is mounted as a Docker
   volume (`cursor_config`) in `docker-compose.yml`, so your account session,
   settings, and extensions survive container recreation.
 - Cursor login links open with the existing Chrome install through
-  `/usr/local/bin/default-browser`, which adds Chrome's required `--no-sandbox`
-  flag when running as root. XFCE's preferred browser is set to Debian's
-  sensible browser helper, so the Applications menu follows the same wrapper.
+  `/usr/local/bin/default-browser`. The image now installs **Firefox** from
+  Mozilla's APT repository (not Snap), and this wrapper prefers Firefox as the
+  desktop browser. It falls back to Chrome (with `--no-sandbox`) if Firefox is
+  unavailable. XFCE's preferred browser is set to Debian's sensible browser
+  helper, so the Applications menu follows the same wrapper.
 - After logging in, run `/root/.config/Cursor/export-cursor-auth.mjs` to write
   `/root/.config/Cursor/cursor-auth.json` with the access token, refresh token,
   cached email, and `telemetry.machineId` for later use.
 - To pin a Cursor build, override `CURSOR_APPIMAGE_URL` at build time. The
   default resolves the stable Linux AppImage from `https://cursor.com/api/download?platform=linux-x64&releaseTrack=stable`.
+
+### Firefox in this container (manual + Puppeteer)
+
+This image installs Firefox using Mozilla's APT repository because Ubuntu's
+Snap-based Firefox is not a good fit for normal Docker containers.
+
+- Manual desktop browsing: open Firefox inside noVNC (`http://localhost:6080/vnc.html`).
+- Programmatic automation: run Puppeteer with `browser: 'firefox'` and
+  `DISPLAY=:1` so sessions render in the same XFCE desktop.
+
+Example:
+
+```js
+import puppeteer from 'puppeteer';
+
+const browser = await puppeteer.launch({
+  browser: 'firefox',
+  headless: false,
+  executablePath: '/usr/bin/firefox',
+  env: { ...process.env, DISPLAY: ':1' },
+});
+```
 
 ## Node / nvm
 

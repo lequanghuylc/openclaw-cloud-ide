@@ -34,3 +34,23 @@ test("supports optional VNC_PASSWORD for noVNC connections", async () => {
 
   assert.match(compose, /VNC_PASSWORD: \$\{VNC_PASSWORD:-\}/);
 });
+
+test("uses noVNC-safe default Cursor launch flags", async () => {
+  const installer = await readFile(installerUrl, "utf8");
+
+  assert.match(installer, /--no-sandbox/);
+  assert.match(installer, /--disable-gpu/);
+  assert.match(installer, /--disable-software-rasterizer/);
+  assert.match(installer, /--disable-dev-shm-usage/);
+  assert.match(installer, /--password-store=basic/);
+});
+
+test("installs Firefox from Mozilla APT and prefers it as default browser", async () => {
+  const installer = await readFile(installerUrl, "utf8");
+
+  assert.match(installer, /packages\.mozilla\.org\/apt\/repo-signing-key\.gpg/);
+  assert.match(installer, /\/etc\/apt\/sources\.list\.d\/mozilla\.list/);
+  assert.match(installer, /apt-get install -y --no-install-recommends firefox/);
+  assert.match(installer, /if \[\[ -n "\$firefox_bin" \]\]; then/);
+  assert.match(installer, /exec "\$firefox_bin" "\\\$@"/);
+});

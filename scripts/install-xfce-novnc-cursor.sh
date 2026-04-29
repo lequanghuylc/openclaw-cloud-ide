@@ -28,6 +28,7 @@ export DEBIAN_FRONTEND=noninteractive
 install_apt_deps() {
   apt-get update -qq
   apt-get install -y --no-install-recommends \
+    gnupg \
     xfce4 \
     xfce4-terminal \
     xfce4-goodies \
@@ -59,6 +60,26 @@ install_apt_deps() {
     sqlite3 \
     curl \
     ca-certificates
+  rm -rf /var/lib/apt/lists/*
+}
+
+install_firefox_from_mozilla_apt() {
+  install -d -m 0755 /etc/apt/keyrings
+  curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg \
+    -o /etc/apt/keyrings/packages.mozilla.org.asc
+
+  cat >/etc/apt/sources.list.d/mozilla.list <<'MOZILLA'
+deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main
+MOZILLA
+
+  cat >/etc/apt/preferences.d/mozilla <<'PIN'
+Package: *
+Pin: origin packages.mozilla.org
+Pin-Priority: 1000
+PIN
+
+  apt-get update -qq
+  apt-get install -y --no-install-recommends firefox
   rm -rf /var/lib/apt/lists/*
 }
 
@@ -106,20 +127,25 @@ install_cursor() {
   fi
 
   # Launcher flags:
-  #   --no-sandbox        Electron's setuid sandbox is unavailable when running
-  #                       as root inside the container; without this, Cursor
-  #                       refuses to start and no login can happen.
-  #   --password-store=basic
-  #                       Force Electron's safeStorage onto a local file-backed
-  #                       store instead of libsecret / gnome-keyring (no
-  #                       keyring daemon runs in this image), so the Cursor
-  #                       account session token actually
-  #                       persists across restarts.
+  #   --no-sandbox                Electron's setuid sandbox is unavailable when
+  #                               running as root inside the container.
+  #   --disable-gpu
+  #   --disable-software-rasterizer
+  #                               noVNC/Xvfb sessions can crash Electron's
+  #                               shared process during GPU initialization.
+  #   --disable-dev-shm-usage     /dev/shm is often small in containers; this
+  #                               avoids renderer crashes caused by SHM limits.
+  #   --password-store=basic      Force Electron's safeStorage onto a local
+  #                               file-backed store instead of libsecret /
+  #                               gnome-keyring, so Cursor auth persists.
   cat >/usr/local/bin/cursor <<'LAUNCHER'
 #!/usr/bin/env bash
 export BROWSER="${BROWSER:-/usr/local/bin/default-browser}"
 exec /opt/cursor/squashfs-root/AppRun \
   --no-sandbox \
+  --disable-gpu \
+  --disable-software-rasterizer \
+  --disable-dev-shm-usage \
   --password-store=basic \
   "$@"
 LAUNCHER
@@ -150,6 +176,11 @@ DESKTOP
 }
 
 configure_default_browser() {
+  local firefox_bin=""
+  if command -v firefox >/dev/null 2>&1; then
+    firefox_bin="$(command -v firefox)"
+  fi
+
   local chrome_bin=""
   if command -v google-chrome >/dev/null 2>&1; then
     chrome_bin="$(command -v google-chrome)"
@@ -157,15 +188,23 @@ configure_default_browser() {
     chrome_bin="$(command -v google-chrome-stable)"
   fi
 
-  if [[ -z "$chrome_bin" ]]; then
-    echo "WARN  Google Chrome not found; Cursor login URLs may not open automatically" >&2
+  if [[ -z "$firefox_bin" && -z "$chrome_bin" ]]; then
+    echo "WARN  No supported browser found; web links may not open automatically" >&2
     return
   fi
 
-  cat >/usr/local/bin/default-browser <<BROWSER
+  # Prefer Firefox (primary desktop browser). Fall back to Chrome when needed.
+  if [[ -n "$firefox_bin" ]]; then
+    cat >/usr/local/bin/default-browser <<BROWSER
+#!/usr/bin/env bash
+exec "$firefox_bin" "\$@"
+BROWSER
+  else
+    cat >/usr/local/bin/default-browser <<BROWSER
 #!/usr/bin/env bash
 exec "$chrome_bin" --no-sandbox "\$@"
 BROWSER
+  fi
   chmod +x /usr/local/bin/default-browser
 
   cat >/usr/share/applications/default-browser.desktop <<'DESKTOP'
@@ -316,6 +355,7 @@ XSTART
 }
 
 install_apt_deps
+install_firefox_from_mozilla_apt
 install_novnc_static
 install_cursor
 configure_default_browser
@@ -324,4 +364,4 @@ write_x11vnc_startup
 write_desktop_shortcut
 write_xstartup
 
-echo "OK    XFCE + noVNC + Cursor installed (noVNC port: ${NOVNC_PORT}, VNC port: ${VNC_PORT}, display: ${VNC_DISPLAY})"
+echo "OK    XFCE + noVNC + Cursor + Firefox installed (noVNC port: ${NOVNC_PORT}, VNC port: ${VNC_PORT}, display: ${VNC_DISPLAY})"

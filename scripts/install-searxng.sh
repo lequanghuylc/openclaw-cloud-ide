@@ -39,24 +39,45 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+apt_pkg_exists() {
+  # `apt-cache show` returns non-zero when package is unknown in current repos.
+  apt-cache show "$1" >/dev/null 2>&1
+}
+
 ensure_apt_deps() {
-  if dpkg -s python3-venv git build-essential libxslt1-dev zlib1g-dev &>/dev/null; then
-    return 0
-  fi
   apt-get update -qq
-  apt-get install -y --no-install-recommends \
-    python3-dev \
-    python3-babel \
-    python3-venv \
-    python-is-python3 \
-    git \
-    build-essential \
-    libxslt1-dev \
-    zlib1g-dev \
-    libffi-dev \
-    libssl-dev \
-    openssl \
+
+  local packages=(
+    python3
+    python3-pip
+    git
+    build-essential
+    zlib1g-dev
+    libffi-dev
+    libssl-dev
+    openssl
     ca-certificates
+  )
+
+  # Prefer distro-specific names when available.
+  if apt_pkg_exists python3-dev; then packages+=(python3-dev); fi
+  if apt_pkg_exists python3-babel; then packages+=(python3-babel); fi
+  if apt_pkg_exists python-is-python3; then packages+=(python-is-python3); fi
+  if apt_pkg_exists python3-venv; then
+    packages+=(python3-venv)
+  elif apt_pkg_exists python3-virtualenv; then
+    packages+=(python3-virtualenv)
+  elif apt_pkg_exists virtualenv; then
+    packages+=(virtualenv)
+  fi
+
+  if apt_pkg_exists libxslt1-dev; then
+    packages+=(libxslt1-dev)
+  elif apt_pkg_exists libxslt-dev; then
+    packages+=(libxslt-dev)
+  fi
+
+  apt-get install -y --no-install-recommends "${packages[@]}"
 }
 
 clone_or_update() {
@@ -78,7 +99,14 @@ install_python_deps() {
     return 0
   fi
   if [[ ! -d "$VENV" ]]; then
-    python3 -m venv "$VENV"
+    if python3 -m venv "$VENV" >/dev/null 2>&1; then
+      :
+    elif command -v virtualenv >/dev/null 2>&1; then
+      virtualenv -p python3 "$VENV"
+    else
+      echo "ERROR SearXNG: cannot create Python virtual environment (missing python3-venv/virtualenv)" >&2
+      exit 1
+    fi
   fi
   # shellcheck disable=SC1090
   source "${VENV}/bin/activate"
