@@ -26,7 +26,7 @@ test("supports optional VNC_PASSWORD for noVNC connections", async () => {
   assert.match(installer, /\/usr\/local\/bin\/start-x11vnc\.sh/);
   assert.match(installer, /VNC_PASSWORD/);
   assert.match(installer, /x11vnc -storepasswd "\$VNC_PASSWORD" "\$passwd_file"/);
-  assert.match(installer, /-passwdfile "\$passwd_file"/);
+  assert.match(installer, /-rfbauth "\$passwd_file"/);
   assert.match(installer, /-nopw/);
 
   assert.match(supervisord, /command=\/usr\/local\/bin\/start-x11vnc\.sh/);

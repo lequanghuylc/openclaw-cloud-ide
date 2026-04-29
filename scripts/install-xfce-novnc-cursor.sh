@@ -279,7 +279,7 @@ if [[ -n "${VNC_PASSWORD:-}" ]]; then
   mkdir -p "$(dirname "$passwd_file")"
   x11vnc -storepasswd "$VNC_PASSWORD" "$passwd_file" >/dev/null
   chmod 600 "$passwd_file"
-  exec /usr/bin/x11vnc "${base_args[@]}" -passwdfile "$passwd_file"
+  exec /usr/bin/x11vnc "${base_args[@]}" -rfbauth "$passwd_file"
 fi
 
 exec /usr/bin/x11vnc "${base_args[@]}" -nopw
